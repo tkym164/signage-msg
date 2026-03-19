@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>電光掲示板</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #111;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .board {
+    width: 100%;
+    background: #080808;
+    border-top: 6px solid #222;
+    border-bottom: 6px solid #222;
+    box-shadow: 0 0 60px rgba(255,110,0,0.12), inset 0 0 40px rgba(0,0,0,0.9);
+    overflow: hidden;
+    position: relative;
+    height: 200px; /* ← ボードの高さ（font-size の約2倍が目安） */
+  }
+
+  /* スキャンライン */
+  .board::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, transparent 0px, transparent 3px, rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.15) 4px);
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  #runner {
+    position: absolute;
+    top: 0; left: 0;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+    will-change: transform;
+  }
+
+  .seg {
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 150px;    /* ← 文字サイズ */
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    padding-right: 120px; /* ← テキスト間の間隔 */
+    display: inline-block;
+  }
+</style>
+</head>
+<body>
+<div class="board"><div id="runner"></div></div>
+
+<script>
+// =====================================================================
+// ★ 設定エリア ★
+// =====================================================================
+
+// スクロール速度（ピクセル/秒）大きいほど速い
+const SPEED = 160;
+
+// テキストの登録リスト
+// { text: '表示する文字列', color: '文字色' } を好きなだけ追加してください
+const TEXTS = [
+  { text: '憲法9条　日本国民は、正義と秩序を基調とする国際平和を誠実に希求し、国権の発動たる戦争と、武力による威嚇又は武力の行使は、国際紛争を解決する手段としては、永久にこれを放棄する。', color: '#00ff41' },
+  { text: '憲法12条　この憲法が国民に保障する自由及び権利は、国民の不断の努力によつて、これを保持しなければならない。', color: '#ffe600' },
+  { text: '憲法13条　すべて国民は、個人として尊重される。生命、自由及び幸福追求に対する国民の権利については、公共の福祉に反しない限り、立法その他の国政の上で、最大の尊重を必要とする。', color: '#00cfff' },
+  { text: '憲法14条　すべて国民は、法の下に平等であつて、人種、信条、性別、社会的身分又は門地により、政治的、経済的又は社会的関係において、差別されない。', color: '#ff8c00' },
+  { text: '憲法97条　この憲法が日本国民に保障する基本的人権は、人類の多年にわたる自由獲得の努力の成果であつて、これらの権利は、過去幾多の試錬に堪へ、現在及び将来の国民に対し、侵すことのできない永久の権利として信託されたものである。', color: '#ffffff' },
+];
+
+// =====================================================================
+// 以下は変更不要です
+// =====================================================================
+
+const runner = document.getElementById('runner');
+let posX = 0;
+let totalW = 0;
+let lastTime = null;
+
+function glow(c) {
+  return `0 0 8px ${c}cc, 0 0 22px ${c}88, 0 0 40px ${c}33`;
+}
+
+// テキストを2セット並べてシームレスループ
+function build() {
+  runner.innerHTML = '';
+  for (let set = 0; set < 2; set++) {
+    TEXTS.forEach(e => {
+      const span = document.createElement('span');
+      span.className = 'seg';
+      span.textContent = e.text;
+      span.style.color = e.color;
+      span.style.textShadow = glow(e.color);
+      runner.appendChild(span);
+    });
+  }
+  // フォント確定後に1セット分の幅を計測
+  document.fonts.ready.then(() => {
+    const segs = runner.querySelectorAll('.seg');
+    const half = segs.length / 2;
+    totalW = 0;
+    for (let i = 0; i < half; i++) {
+      totalW += segs[i].getBoundingClientRect().width
+              + parseFloat(getComputedStyle(segs[i]).paddingRight);
+    }
+  });
+}
+
+function tick(ts) {
+  if (!lastTime) lastTime = ts;
+  const dt = Math.min((ts - lastTime) / 1000, 0.05);
+  lastTime = ts;
+  if (totalW > 0) {
+    posX -= SPEED * dt;
+    if (posX <= -totalW) posX += totalW;
+    runner.style.transform = `translateX(${posX}px)`;
+  }
+  requestAnimationFrame(tick);
+}
+
+build();
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>
